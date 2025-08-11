@@ -2,10 +2,11 @@ from pathlib import Path
 import streamlit as st
 import logging
 import sys
+
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 from src.chat import PersonalRAGChat
 from src.ingest import DocumentIngestor
-from src.retreiver import DocumentRetriever
+from src.retriever import DocumentRetriever
 from src.config import Config
 
 # ---------------------------
@@ -24,7 +25,7 @@ st.markdown("Ask questions about your personal documents!")
 # ---------------------------
 # Session State Init
 # ---------------------------
-if 'chat' not in st.session_state:
+if "chat" not in st.session_state:
     try:
         with st.spinner("Initializing chatbot..."):
             st.session_state.chat = PersonalRAGChat()
@@ -33,7 +34,7 @@ if 'chat' not in st.session_state:
         st.error(f"❌ Failed to initialize chatbot: {e}")
         st.stop()
 
-if 'messages' not in st.session_state:
+if "messages" not in st.session_state:
     st.session_state.messages = []
 
 # ---------------------------
@@ -84,12 +85,18 @@ if prompt := st.chat_input("Ask a question about your documents..."):
     with st.chat_message("assistant"):
         with st.spinner("Thinking..."):
             try:
-                result = st.session_state.chat.ask_question(prompt, include_sources=True)
+                result = st.session_state.chat.ask_question(
+                    prompt, include_sources=True
+                )
                 if result.get("error"):
                     st.error(f"Error: {result['answer']}")
                 else:
                     st.write(result["answer"])
-                    st.session_state.messages.append({"role": "assistant", "content": result["answer"]})
+                    st.session_state.messages.append(
+                        {"role": "assistant", "content": result["answer"]}
+                    )
             except Exception as e:
                 st.error(f"Error: {e}")
-                st.session_state.messages.append({"role": "assistant", "content": f"Error: {e}"})
+                st.session_state.messages.append(
+                    {"role": "assistant", "content": f"Error: {e}"}
+                )

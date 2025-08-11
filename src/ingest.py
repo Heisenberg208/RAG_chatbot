@@ -19,6 +19,7 @@ from src.config import Config
 
 logger = logging.getLogger(__name__)
 
+
 class DocumentIngestor:
     def __init__(self, embedding_model: str = None):
         self.config = Config()
@@ -36,8 +37,8 @@ class DocumentIngestor:
             logger.info(f"Using HuggingFace embedding model: {model_name}")
             return HuggingFaceEmbeddings(
                 model_name=model_name,
-                model_kwargs={'device': 'cpu'},
-                encode_kwargs={'normalize_embeddings': True}
+                model_kwargs={"device": "cpu"},
+                encode_kwargs={"normalize_embeddings": True},
             )
         else:
             raise ValueError(f"Unsupported embedding model: {self.embedding_model}")
@@ -69,7 +70,7 @@ class DocumentIngestor:
     # ---------------- Text / MD ----------------
     def load_text_file(self, file_path: Path) -> str:
         try:
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, "r", encoding="utf-8") as f:
                 return f.read()
         except Exception as e:
             logger.error(f"Error loading text file {file_path}: {e}")
@@ -86,7 +87,7 @@ class DocumentIngestor:
     # ---------------- HTML ----------------
     def load_html_file(self, file_path: Path) -> str:
         try:
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, "r", encoding="utf-8") as f:
                 soup = BeautifulSoup(f, "html.parser")
                 return soup.get_text(separator="\n")
         except Exception as e:
@@ -98,26 +99,26 @@ class DocumentIngestor:
     def load_image_file(self, file_path: Path) -> str:
         try:
             # Initialize EasyOCR reader (English only, you can add more languages if needed)
-            reader = easyocr.Reader(['en'], gpu=False)
-            results = reader.readtext(str(file_path), detail=0) 
+            reader = easyocr.Reader(["en"], gpu=False)
+            results = reader.readtext(str(file_path), detail=0)
             return "\n".join(results)
         except Exception as e:
             logger.error(f"Error extracting text from image {file_path}: {e}")
             return ""
-
 
     # ---------------- Web Scraper ----------------
     def load_web_pages(self) -> List[Document]:
         docs = []
         for url in self.config.WEB_URLS:
             try:
-                html = requests.get(url,timeout=10).text
+                html = requests.get(url, timeout=10).text
                 soup = BeautifulSoup(html, "html.parser")
                 text = soup.get_text(separator="\n")
-                docs.append(Document(
-                    page_content=text,
-                    metadata={"source": url, "file_type": "web"}
-                ))
+                docs.append(
+                    Document(
+                        page_content=text, metadata={"source": url, "file_type": "web"}
+                    )
+                )
                 logger.info(f"Scraped: {url}")
             except Exception as e:
                 logger.error(f"Error loading URL {url}: {e}")
@@ -127,22 +128,22 @@ class DocumentIngestor:
     def load_document(self, file_path: Path) -> str:
         suffix = file_path.suffix.lower()
 
-        if suffix == '.pdf':
+        if suffix == ".pdf":
             content = self.load_pdf_pymupdf(file_path)
             if not content.strip():
                 content = self.load_pdf_pdfplumber(file_path)
             return content
 
-        elif suffix in ['.txt', '.md', '.markdown']:
+        elif suffix in [".txt", ".md", ".markdown"]:
             return self.load_text_file(file_path)
 
-        elif suffix == '.docx':
+        elif suffix == ".docx":
             return self.load_docx_file(file_path)
 
-        elif suffix in ['.html', '.htm']:
+        elif suffix in [".html", ".htm"]:
             return self.load_html_file(file_path)
 
-        elif suffix in ['.png', '.jpg', '.jpeg']:
+        elif suffix in [".png", ".jpg", ".jpeg"]:
             return self.load_image_file(file_path)
 
         else:
@@ -150,28 +151,26 @@ class DocumentIngestor:
             return ""
 
     def clean_text(self, text: str) -> str:
-            """
-            Cleans noisy OCR and sensitive data from text.
-            """
-            if not text:
-                return ""
+        """
+        Cleans noisy OCR and sensitive data from text.
+        """
+        if not text:
+            return ""
 
-            # Normalize Unicode (removes accents, weird encodings)
-            text = unicodedata.normalize("NFKC", text)
+        # Normalize Unicode (removes accents, weird encodings)
+        text = unicodedata.normalize("NFKC", text)
 
-            # Remove excessive whitespace
-            text = re.sub(r"\s+", " ", text)
-            text = re.sub(r"[,*__]", " ", text)
-            text = re.sub(r"\n", " ", text)
-            # Remove OCR garbage: sequences of non-alphanumerics > 3 chars
-            text = re.sub(r"[^\w\s]{3,}", " ", text)
+        # Remove excessive whitespace
+        text = re.sub(r"\s+", " ", text)
+        text = re.sub(r"[,*__]", " ", text)
+        text = re.sub(r"\n", " ", text)
+        # Remove OCR garbage: sequences of non-alphanumerics > 3 chars
+        text = re.sub(r"[^\w\s]{3,}", " ", text)
 
-            # Remove obvious OCR artifacts (random capital sequences)
-            text = re.sub(r"[A-Z]{4,}\d*", " ", text)
+        # Remove obvious OCR artifacts (random capital sequences)
+        text = re.sub(r"[A-Z]{4,}\d*", " ", text)
 
-
-
-            return text.strip()
+        return text.strip()
 
     def deduplicate_documents(self, documents: List[Document]) -> List[Document]:
         """
@@ -193,11 +192,19 @@ class DocumentIngestor:
         """
         documents = []
         supported_extensions = [
-            '.pdf', '.txt', '.md', '.markdown',
-            '.docx', '.html', '.htm', '.png', '.jpg', '.jpeg'
+            ".pdf",
+            ".txt",
+            ".md",
+            ".markdown",
+            ".docx",
+            ".html",
+            ".htm",
+            ".png",
+            ".jpg",
+            ".jpeg",
         ]
 
-        for file_path in self.config.DATA_PATH.rglob('*'):
+        for file_path in self.config.DATA_PATH.rglob("*"):
             if file_path.is_file() and file_path.suffix.lower() in supported_extensions:
                 logger.info(f"Processing: {file_path}")
                 content = self.load_document(file_path)
@@ -209,8 +216,8 @@ class DocumentIngestor:
                                 page_content=cleaned,
                                 metadata={
                                     "source": str(file_path),
-                                    "file_type": file_path.suffix.lower()
-                                }
+                                    "file_type": file_path.suffix.lower(),
+                                },
                             )
                         )
                 else:
@@ -223,10 +230,11 @@ class DocumentIngestor:
     def save_to_jsonl(self, documents: List[Document], json_path: Path):
         with open(json_path, "w", encoding="utf-8") as f:
             for doc in documents:
-                json.dump({
-                    "text": doc.page_content,
-                    "metadata": doc.metadata
-                }, f, ensure_ascii=False)
+                json.dump(
+                    {"text": doc.page_content, "metadata": doc.metadata},
+                    f,
+                    ensure_ascii=False,
+                )
                 f.write("\n")
         logger.info(f"Saved dataset to {json_path}")
 
@@ -248,10 +256,10 @@ class DocumentIngestor:
 
     def ingest_documents(self):
         logger.info("Starting document ingestion...")
-        
+
         local_docs = self.process_local_documents()
         web_docs = self.load_web_pages()
-        
+
         all_docs = local_docs + web_docs
 
         if not all_docs:
@@ -266,6 +274,7 @@ class DocumentIngestor:
         logger.info("Document ingestion completed successfully!")
         return vectorstore
 
+
 def main():
     Config.setup_logging()
     ingestor = DocumentIngestor()
@@ -275,6 +284,7 @@ def main():
     except Exception as e:
         logger.error(f"Ingestion failed: {e}")
         print(f"❌ Ingestion failed: {e}")
+
 
 if __name__ == "__main__":
     main()
